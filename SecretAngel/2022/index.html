@@ -75,6 +75,7 @@ if (window.localStorage.initilizied == "false"){
 							window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", '_blank').focus();
 							func();
 						}
+						document.getElementById("msg").appendChild(aa);
 					} else {
 						if (+(window.localStorage.tries) >= 5){
 							func2();
@@ -88,9 +89,24 @@ if (window.localStorage.initilizied == "false"){
 		}
 	} else {
 		if (!window.localStorage.trolled){
-			window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", '_blank').focus();
+			document.getElementById("code").disabled = true;
+			document.getElementById("s").disabled = true;
+			window.localStorage.correct = true;
+			document.getElementById("msg").innerText = `You have passed it with ${window.localStorage.tries} times!`;
+			if ((+window.localStorage.atries - (+window.localStorage.tries)) > 0){
+				document.getElementById("msg").innerText += `Wait, did you resetted it by ${(+window.localStorage.atries - +window.localStorage.tries)/5} times?`
+			}
+			var aa = document.createElement("a");
+			aa.href = "javascript: void(0);";
+			aa.innerText = 'Click here to claim your present!';
+			aa.onclick = () => {
+				window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", '_blank').focus();
+				func();
+			}
+			document.getElementById("msg").appendChild(aa);
+		} else {
+			func();
 		}
-		func();
 	}
 })();
     </script>
