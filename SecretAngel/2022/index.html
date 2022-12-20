@@ -32,7 +32,7 @@ if (window.localStorage.initilizied == "false"){
 	if (window.localStorage.correct != 'true'){
 		var func2 = () => {
 			document.getElementById('msg').innerText = "Sorry, you have used up all of the chances. (Hint: the method is reset is hidden in this page";
-			document.getElementById('msg').innerHTML += "<div class='opacity: 0'>click the transparent button on the right side: <button id='b' class='opacity: 0'>BUTTON</button></div>"
+			document.getElementById('msg').innerHTML += "<div style='opacity: 0'>click the transparent button on the right side: <button id='b' style='opacity: 0'>BUTTON</button></div>"
 			document.getElementById('b').onclick = () => {
 				window.localStorage.tries = 0;
 				window.localStorage.initilizied = false;
