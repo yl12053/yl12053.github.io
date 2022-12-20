@@ -10,14 +10,14 @@
     </form>
     <div id="msg"></div>
     <script>
-      if (window.localStorage.initilizied == undefined) {
+if (window.localStorage.initilizied == undefined) {
 	window.localStorage.initilizied = true;
 	document.getElementById('msg').innerText = "Unluckily, you've got a bad present!\nTry to answer all the question on the paper, and fill in into the blank with no delimiter (such as space), and try to get the real gift!\nYou have only 5 chances, and having a 45% of accuracy will lead you to the real gift."
 	window.localStorage.tries = 0;
 	window.localStorage.atries = 0;
 	window.localStorage.correct = false;
 }
-if (window.localStorage.initilizied = false){
+if (window.localStorage.initilizied == "false"){
 	window.localStorage.initilizied = true;
 	document.getElementById('msg').innerText = "Unluckily, you've got a bad present!\nTry to answer all the question on the paper, and fill in into the blank with no delimiter (such as space), and try to get the real gift!\nYou have only 5 chances, and having a 45% of accuracy will lead you to the real gift."
 	window.localStorage.tries = 0;
@@ -29,8 +29,8 @@ if (window.localStorage.initilizied = false){
 		window.localStorage.trolled = true;
 		document.write(`<img src="{dts}"></img>`);
 	}
-	if (!window.localStorage.correct){
-		if (window.localStorage.tries >= 5){
+	if (window.localStorage.correct == "false"){
+		if (+(window.localStorage.tries) >= 5){
 			document.getElementById('msg').innerText = "Sorry, you have used up all of the chances. (Hint: the method is reset is hidden in this page";
 			document.getElementById('msg').innerHTML += "<div class='opacity: 0'>click the transparent button on the right side: <button id='b' class='opacity: 0'>BUTTON</button></div>"
 			document.getElementById('b').onclick = () => {
@@ -55,15 +55,15 @@ if (window.localStorage.initilizied = false){
 							cnt++;
 						}
 					}
-					window.localStorage.tries++;
-					window.localStorage.atries++;
+					window.localStorage.tries = +(window.localStorage.tries) + 1;
+					window.localStorage.atries = +(window.localStorage.atries) + 1;
 					if (cnt >= 21){
 						document.getElementById("code").disabled = true;
 						document.getElementById("s").disabled = true;
 						window.localStorage.correct = true;
 						document.getElementById("msg").innerText = `You have passed it with {window.localStorage.tries} times!`;
-						if ((window.localStorage.atries - window.localStorage.tries) > 0){
-							document.getElementById("msg").innerText += `Wait, did you resetted it by {(window.localStorage.atries - window.localStorage.tries)/5} times?`
+						if ((+window.localStorage.atries - (+window.localStorage.tries)) > 0){
+							document.getElementById("msg").innerText += `Wait, did you resetted it by {(+window.localStorage.atries - +window.localStorage.tries)/5} times?`
 						}
 						var aa = document.createElement("a");
 						aa.href = "javascript: void(0);";
