@@ -30,7 +30,7 @@ if (window.localStorage.initilizied == "false"){
 		document.write(`<img src="${dts}"></img>`);
 	}
 	if (window.localStorage.correct != 'true'){
-		if (+(window.localStorage.tries) >= 5){
+		var func2 = () => {
 			document.getElementById('msg').innerText = "Sorry, you have used up all of the chances. (Hint: the method is reset is hidden in this page";
 			document.getElementById('msg').innerHTML += "<div class='opacity: 0'>click the transparent button on the right side: <button id='b' class='opacity: 0'>BUTTON</button></div>"
 			document.getElementById('b').onclick = () => {
@@ -39,7 +39,10 @@ if (window.localStorage.initilizied == "false"){
 				location.reload();
 			}
 			document.getElementById("code").disabled = true;
-			document.getElementById("s").disabled = true;
+			document.getElementById("form").onsubmit = () => {return false;};
+		document.getElementById("s").disabled = true;}
+		if (+(window.localStorage.tries) >= 5){
+			func2();
 		} else {
 			document.getElementById("form").onsubmit = () => {
 				var answer = ['D', 'D', 'B', 'C', 'C', 'B', 'D', 'A', 'A', 'C', 'B', 'A', 'B', 'D', 'B', 'A', 'B', 'C', 'B', 'D', 'B', 'D', 'A', 'A', 'D', 'B', 'C', 'B', 'C', 'A', 'C', 'D', 'A', 'C', 'B', 'C', 'C', 'C', 'A', 'A', 'D', 'A', 'D', 'B', 'A']
@@ -73,7 +76,11 @@ if (window.localStorage.initilizied == "false"){
 							func();
 						}
 					} else {
-						document.getElementById("msg").innerText = "Try again! (But I guess you have to type your things again";
+						if (+(window.localStorage.tries) >= 5){
+							func2();
+						} else {
+							document.getElementById("msg").innerText = "Try again! (But I guess you have to type your things again";
+						}
 					}
 				}
 				return false;
