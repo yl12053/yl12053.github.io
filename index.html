@@ -1,4 +1,466 @@
+<!doctype html>
 <html>
-  <head>
-  </head>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script> 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script>
+            function readFile(f){
+                return new Promise((resolve, reject) => {
+                    var fr = new FileReader();
+                    fr.onload = (e) => {
+                        resolve(e.target.result);
+                    };
+                    fr.readAsArrayBuffer(f);
+                });
+            }
+			function humanFileSize(bytes, si=false, dp=1) {
+				const thresh = si ? 1000 : 1024;
+				if (Math.abs(bytes) < thresh) {
+					return bytes + ' B';
+				}
+				const units = si ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+				let u = -1;
+				const r = 10**dp;
+				do {
+					bytes /= thresh;
+					++u;
+				} while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+				return bytes.toFixed(dp) + ' ' + units[u];
+			}
+            function bytesToHex(bytes) {
+                for (var hex = [], i = 0; i < bytes.length; i++) {
+                    var current = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
+                    hex.push((current >>> 4).toString(16));
+                    hex.push((current & 0xF).toString(16));
+                }
+                return hex.join("");
+            }
+            function hexToBytes(hex) {
+                for (var bytes = [], c = 0; c < hex.length; c += 2)
+                    bytes.push(parseInt(hex.substr(c, 2), 16));
+                return bytes;
+            }
+</script>
+</head>
+<body>
+<header class="navbar navbar-expand-lg bd-navbar sticky-top bg-primary" data-bs-theme="dark">
+    <nav class="container bd-gutter flex-wrap flex-lg-nowrap">
+        <div class="container-fluid"> <a class="navbar-brand" href="#">SZKTAS</a> </div>
+        <button class="navbar-toggler bg-primary-subtle" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"> <span class="navbar-toggler-icon"></span> </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="tnav">
+                <li class="nav-item"> <a class="nav-link active" aria-current="page" href="#encdiv">Encrypt</a> </li>
+                <li class="nav-item"> <a class="nav-link" href="#decdiv">Decrypt</a> </li>
+                <li clss="nav-item"> <a class="nav-link" href="#prediv">Preferences</a> </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+<div class="container-lg cbig" id="encdiv">
+    <div class="card m-lg-2 p-lg-2">
+        <label>Files</label>
+        <div class="d-inline-flex mt-lg-2"> <a class="btn btn-primary" data-bs-toggle="collapse" href="#files" role="button">Expand</a> </div>
+        <div class="collapse" id="files">
+            <table class="table table-hover" style="vertical-align: middle">
+                <thead>
+                    <tr>
+                        <th id="tname" scope="col">Filename (#0)</th>
+                        <th scope="col" style="width: 160px">Size</th>
+                        <th scope="col" style="width: 160px">Remove</th>
+                    </tr>
+                </thead>
+                <tbody id="filebody">
+                    <tr style="display: none">
+                        <td>filename</td>
+                        <td>size</td>
+                        <td>btn</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="container-lg card card-body">
+                <label for="file" class="form-label">Upload File</label>
+                <div class="row">
+                    <div class="col-12 col-lg-10">
+                        <input class="form-control" type="file" id="file" multiple>
+                    </div>
+                    <a href="#" class="btn btn-primary disabled col-12 col-lg-1 gx-1 px-1 px-lg-0" id="addFile">Add</a> <a href="#" class="btn btn-danger disabled col-12 col-lg-1 gx-1 px-1 px-lg-0" id="removeFile">Clear</a> </div>
+            </div>
+        </div>
+    </div>
+    <div class="card m-lg-2 p-lg-2"> Encryption Setting
+        <div class="form-floating">
+            <input type="password" class="form-control" id="key" placeholder="password">
+            <label for="key">Key (Optional)</label>
+        </div>
+    </div>
+    <div class="card m-lg-2 p-lg-2">
+        <div class="form-group form-inline">
+            <div class="form-check form-check-reverse form-switch" style="width: fit-content">
+                <label class="form-check-label" for="payloadEnable">Payload</label>
+                <input class="form-check-input" type="checkbox" role="switch" id="payloadEnable">
+            </div>
+        </div>
+        <div class="collapse" id="payloadCollapse"> <br>
+            <ul class="nav nav-tabs" id="payloadnav" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="nimage" data-bs-toggle="tab" data-bs-target="#tnimage" type="button" role="tab" aria-controls="tnimage" aria-selected="true">Image</button>
+                </li>
+            </ul>
+            <div class="tab-content card">
+                <div class="tab-pane fade show active card-body" id="pnimage" role="tabpanel" aria-labelledby="nimage" tabindex="0">
+                    <label for="pdd">Payload Source</label>
+                    <div class="dropdown" id="pdw1">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="pdd"> Generate by text </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item active" href="#" dc="pdd" di="1">Generate by text</a></li>
+                            <li><a class="dropdown-item" href="#" dc="pdd" di="2">Upload</a></li>
+                        </ul>
+                    </div>
+                    <br>
+                    <div class="form-floating" df="pdd" di="1">
+                        <textarea class="form-control" id="gtext" placeholder="text">Intentionally Blank</textarea>
+                        <label for="gtext">Generating Text</label>
+                    </div>
+                    <div df="pdd" di="2" style="display: none">
+                        <label for="imgpay" class="form-label">Custom image payload</label>
+                        <input class="form-control is-invalid" type="file" id="imgpay" accept="image/*">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card m-lg-2 p-lg-2 excl"> Generate
+        <button type="button" class="btn btn-primary" id="gener">Generate!</button>
+        <div class="progress" id="pout" style="display: none">
+            <div id="pin" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+    </div>
+</div>
+<div class="container-lg cbig" id="decdiv" style="display: none">
+    <div class="card m-lg-2 p-lg-2">
+        <label for="defile" class="form-label">File</label>
+        <input class="form-control is-invalid" type="file" id="defile">
+    </div>
+    <div class="card m-lg-2 p-lg-2"> Decrypting Setting
+        <div class="form-floating">
+            <input type="password" class="form-control" id="dekey" placeholder="password">
+            <label for="dekey">Key</label>
+        </div>
+    </div>
+    <div class="card m-lg-2 p-lg-2">
+        <div class="form-group form-inline">
+            <div class="form-check form-check-reverse form-switch" style="width: fit-content">
+                <label class="form-check-label" for="payloadEnableD">Payload</label>
+                <input class="form-check-input" type="checkbox" role="switch" id="payloadEnableD">
+            </div>
+            <div class="collapse" id="payloadCollapseD">
+                <br>
+                <ul class="nav nav-tabs" id="payloadnavd" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="dimage" data-bs-toggle="tab" data-bs-target="#tdimage" type="button" role="tab" aria-controls="tdimage" aria-selected="true">Image</button>
+                    </li>
+                </ul>
+                <div class="tab-content card">
+                    <div class="tab-pane fade show active card-body" id="pdimage" role="tabpanel" aria-labelledby="nimage" tabindex="0">
+                        (No further setting is needed)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card m-lg-2 p-lg-2 excl"> Decrypt
+        <button type="button" class="btn btn-primary" id="deer">Decrypt!</button>
+        <div class="progress" id="dout" style="display: none">
+            <div id="din" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+    </div>
+    <div class="card m-lg-2 p-lg-2 excl" id = "dr"> Result</div>
+</div>
+<script>
+		var payloadCollapse = new bootstrap.Collapse('#payloadCollapse', {
+			toggle: false
+		});
+        var payloadCollapseD = new bootstrap.Collapse('#payloadCollapseD', {
+            toggle: false
+        });
+        $("#payloadEnableD").change(() => {
+            $("#payloadEnableD")[0].disabled = true;
+            if ($("#payloadEnableD")[0].checked){
+                payloadCollapseD.show();
+            } else {
+                payloadCollapseD.hide();
+            }
+        });
+        var g = () => {$("#payloadEnableD")[0].disabled = false};
+        $("#payloadCollapseD").on("hidden.bs.collapse", g).on("shown.bs.collapse", g);
+        function tcheck(){
+            if ($("#payloadEnable")[0]){
+                switch ($("#pdw1 > ul > li > a.active").attr("di")){
+                    case "1":
+                        return $("#gtext").val().length > 0;
+                    case "2":
+                        return $("#imgpay").val() != "";
+                    default:
+                        return false;
+                }
+            } else {
+                return true;
+            }
+        }
+        $("a[dc=pdd]").click((e) => {
+            $("pdd").text($(e.target).text());
+            $("a[dc=pdd]").removeClass("active");
+            $(e.target).addClass("active");
+            $("div[df=pdd]").hide();
+            $(`div[df=pdd][di=${$(e.target).attr("di")}]`).show();
+        });
+		var f = (() => {$("#payloadEnable")[0].disabled=false;});
+        $("#gtext").change(() => {
+            if ($("#gtext").val().length == 0){
+                $("#gtext").addClass("is-invalid");
+            } else {
+                $("#gtext").removeClass("is-invalid");
+            }
+            tcheck();
+        });
+        $("#imgpay").change(() => {
+            tcheck();
+        });
+		$("#payloadCollapse").on("hidden.bs.collapse", f).on("shown.bs.collapse", f);
+		$("#payloadEnable").change(() => {
+			$("#payloadEnable")[0].disabled = true;
+			if ($("#payloadEnable")[0].checked){
+				payloadCollapse.show();
+                tcheck();
+			} else {
+				payloadCollapse.hide();
+                $("#gener")[0].disabled = false;
+			}
+		});
+		var fs = {};
+		$("#file").change(() => {
+			if ($("#file")[0].files.length){
+				$("#addFile").removeClass("disabled");
+				$("#removeFile").removeClass("disabled");
+			} else {
+				$("#addFile").addClass("disabled");
+				$("#removeFile").addClass("disabled");
+			}
+		});
+		
+		$("#removeFile").click(() => {
+			if ($("#removeFile").hasClass("disabled")){
+				return false;
+			}
+			$("#file").val("");
+			$("#addFile").addClass("disabled");
+			$("#removeFile").addClass("disabled");
+		});
+		
+		$("#addFile").click(() => {
+			if ($("#addFile").hasClass("disabled")){
+				return false;
+			}
+			$("#file")[0].disabled = true;
+			$("#addFile").addClass("disabled");
+			$("#removeFile").addClass("disabled");
+			var files = $("#file")[0].files;
+			var lg = files.length;
+			for (var i of files){
+				var reader = new FileReader();
+				function getCallback(j){
+					return function(e){
+						if (j.name in fs){
+							lg--;
+							$("#tname").text(`Filename (#${Object.entries(fs).length})`);
+							if (lg == 0){
+								$("#file")[0].disabled = false;
+								$("#file").val("");
+							}
+							return;
+						}
+						fs[j.name] = e.target.result;
+						$("#filebody").append($("<tr>").append($("<td>").text(j.name).addClass("text-truncate"), $("<td>").text(humanFileSize(j.size, false, 1)), $("<td>").append($("<a>").attr("href", "#").addClass("btn btn-outline-warning").text("Remove").click((e) => {
+							if ($(e.target).hasClass("btn-outline-warning")){
+								$(e.target).removeClass("btn-outline-warning").addClass("btn-danger").text("Confirm");
+								setTimeout(() => {
+									if (!$(e.target).hasClass("disabled")){
+										$(e.target).removeClass("btn-danger").addClass("btn-outline-warning").text("Remove");
+									}
+								}, 5000);
+							} else {
+								$(e.target).removeClass("btn-danger").addClass("btn-outline-danger").addClass("disabled").text("Removing");
+								delete fs[j.name];
+								$(e.target).parentsUntil("tbody", "tr").remove();
+								$("#tname").text(`Filename (#${Object.entries(fs).length})`);
+							}
+						}))));
+						lg--;
+						$("#tname").text(`Filename (#${Object.entries(fs).length})`);
+						if (lg == 0){
+							$("#file")[0].disabled = false;
+							$("#file").val("");
+						}
+					}
+				}
+				reader.onload = getCallback(i);
+        		reader.readAsArrayBuffer(i);
+			};
+		});
+    $("#gener").click(() => {
+        $("#gener")[0].disabled=true;
+        $("#encdiv > div:not(.excl)").css("filter", "brightness(80%)").css("pointer-events", "none");
+        $("#pout").show();
+        $("#pin").css("width", "0%").text("Archiving");
+        async function main(){
+            var jzip = new JSZip();
+            for (item in fs){
+                jzip.file(item, fs[item]);
+            }
+            var contentu = await jzip.generateAsync({
+                type: "uint8array",
+                compression: "DEFLATE"
+            });
+            $("#pin").css("width", "20%").text("Encrypting");
+            var key = $("#key").val();
+            var hash = CryptoJS.SHA256(key);
+            var msg = CryptoJS.lib.WordArray.create(contentu.buffer);
+            var res = CryptoJS.AES.encrypt(msg, hash, {iv: hash});
+            var rb64 = CryptoJS.enc.Base64.stringify(res.ciphertext);
+            $("#pin").css("width", "50%").text("Content Converting");
+            var ares = new Uint8Array(await (await fetch("data:application/octet-stream;base64," + rb64)).arrayBuffer());
+            var rtype = ".crypted"
+            if ($("#payloadEnable")[0].checked){
+                rtype = ".jpg"
+                var fct;
+                switch ($("#pdw1 > ul > li > a.active").attr("di")){
+                    case "1":
+                        $("#pin").css("width", "70%").text("Generating Payload");
+                        var text = $("#gtext").val();
+                        var c = $("<canvas width=\"1920\" height=\"1080\">");
+                        var ctx=c[0].getContext("2d");
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(0, 0, 1920,1080);
+                        ctx.fillStyle = "black";
+                        ctx.font="30px Arial";
+                        var axr = text.split("\n");
+                        for (var n=0; n<axr.length; n++){
+                            ctx.fillText(axr[n],10,50 + n*50);
+                        }
+                        fct = c;
+                        break;
+                    case "2":
+                        var promise = new Promise((resolve, reject) => {
+                            $("#pin").css("width", "70%").text("Reading Payload");
+                            var img = new Image;
+                            img.onload = () => {
+                                URL.revokeObjectURL(img.src);
+                                var c = $("<canvas>");
+                                var ctx = c[0].getContext("2d");
+                                c.width = img.width;
+                                c.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                                fct = c;
+                                resolve("");
+                            };
+                            img.src = URL.createObjectURL($("#imgpay")[0].files[0]);
+                        });
+                        await promise();
+                        break;
+                    default:
+                        return false;
+                }
+                var durl = fct[0].toDataURL('image/jpeg');
+                $("#pin").css("width", "80%").text("Appending Payload");
+                var resp = await fetch(durl);
+                var abuff = await resp.arrayBuffer();
+                var cbuff = new Uint8Array(abuff);
+                var nbuff = new Uint8Array(cbuff.length + ares.length);
+                nbuff.set(cbuff, 0);
+                nbuff.set(ares, cbuff.length);
+                ares = nbuff;
+            }
+            var blo = new Blob([ares]);
+            var burl = URL.createObjectURL(blo);
+            $("#pin").css("width", "100%").text("Done");
+            $("#encdiv > div.excl").append($('<button class="btn btn-success">').text(`Download #${$("#encdiv > div.excl > button.btn-success").length + 1}`).click(((ut, rt) => (() => {
+                var as = $("<a>").hide().attr("href", ut).attr("download", "File"+rt);
+                $(document.documentElement).append(as);
+                as[0].click();
+            }))(burl, rtype)));
+            $("#gener")[0].disabled=false;
+            $("#encdiv > div:not(.excl)").css("filter", "").css("pointer-events", "");
+            $("#pout").fadeOut();
+        }
+        main();
+    });
+    $("#tnav > li > a").click((e) => {
+        $("#tnav > li > a").removeClass("active");
+        $(e.target).addClass("active");
+        $("div.cbig").hide();
+        $(e.target.attributes.href.value).show();
+    });
+    $("#defile").change(() => {
+        if ($("#defile").val()){
+            $("#defile").removeClass("is-invalid");
+        } else {
+            $("#defile").addClass("is-invalid");
+        }
+    });
+    $("#deer").click(() => {
+        $("#deer")[0].disabled = true;
+        $("#decdiv > div:not(.excl)").css("filter", "brightness(80%)").css("pointer-events", "none");
+        async function main(){
+            var cont = await (readFile($("#defile")[0].files[0]));
+            var ucont = new Uint8Array(cont);
+            if ($("#payloadEnableD")[0].checked){
+                for (var i = 0; (i < ucont.length - 1) && !((ucont[i] == 255)&&(ucont[i+1] == 217)); i++);
+                if (!((ucont[i] == 255)&&(ucont[i+1] == 217))){
+                    $("#dr").append($('<button class="btn btn-danger" disabled>').text(`#${$("#dr > button").length + 1}: Wrong Payload Setting`));
+                    $("#decdiv > div:not(.excl)").css("filter", "").css("pointer-events", "");
+                    $("#deer")[0].disabled = false;
+                    return;
+                }
+                ucont = ucont.slice(i+2);
+            }
+            var wcont = CryptoJS.lib.WordArray.create(ucont.buffer);
+            var bcont = CryptoJS.enc.Base64.stringify(wcont);
+            var key = CryptoJS.SHA256($("#dekey").val());
+            var dobj = CryptoJS.AES.decrypt(bcont, key, {iv: key});
+            if (dobj.words.length == 0){
+                $("#dr").append($('<button class="btn btn-danger" disabled>').text(`#${$("#dr > button").length + 1}: Wrong Passcode`));
+                $("#decdiv > div:not(.excl)").css("filter", "").css("pointer-events", "");
+                $("#deer")[0].disabled = false;
+                return;
+            }
+            var db64 = CryptoJS.enc.Base64.stringify(dobj);
+            var dbf = await (await fetch("data:application/octet-stream;base64," + db64)).arrayBuffer();
+            var dubf = new Uint8Array(dbf);
+            if ((dubf[0] != 80) && (dubf[1] != 75) && (dubf[2] != 3) && (dubf[3] != 4)){
+                $("#dr").append($('<button class="btn btn-danger" disabled>').text(`#${$("#dr > button").length + 1}: Wrong Passcode or Payload`));
+                $("#decdiv > div:not(.excl)").css("filter", "").css("pointer-events", "");
+                $("#deer")[0].disabled = false;
+                return;
+            }
+            var dblo = new Blob([dubf], {type: "application/zip"});
+            var odurl = URL.createObjectURL(dblo);
+            var din = $("#dr > button").length + 1;
+            $("#dr").append($('<button class="btn btn-success">').text(`Download #${din} as zip`).click(((ut, rt, i) => (() => {
+                var as = $("<a>").hide().attr("href", ut).attr("download", "File"+rt);
+                $(document.documentElement).append(as);
+                as[0].click();
+            }))(odurl, ".zip", din)));
+            $("#decdiv > div:not(.excl)").css("filter", "").css("pointer-events", "");
+            $("#deer")[0].disabled = false;
+        }
+        main();
+    });
+	</script>
+</body>
 </html>
